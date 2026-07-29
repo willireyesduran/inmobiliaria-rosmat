@@ -1,30 +1,136 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-model Property {
-  id          Int      @id @default(autoincrement())
-  title       String
+// ============================================================
+// TIPOS DE PROPIEDAD
+// Ejemplos: Apartamento, Casa, Villa, Terreno, Local Comercial
+// ============================================================
+
+model PropertyType {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
   description String?
-  price       Float
+  active      Boolean    @default(true)
 
-  type        String
-  operation   String
+  properties  Property[]
 
-  bedrooms    Int?
-  bathrooms   Int?
-  area        Float?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
 
+// ============================================================
+// TIPOS DE OPERACIÓN
+// Ejemplos: Venta, Alquiler, Alquiler Temporal
+// ============================================================
+
+model OperationType {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
+  description String?
+  active      Boolean    @default(true)
+
+  properties  Property[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+// ============================================================
+// PROPIEDAD
+// Información principal del inmueble
+// ============================================================
+
+model Property {
+  id              Int           @id @default(autoincrement())
+
+  // Información básica
+  title           String
+  description     String?
+
+  // Información económica
+  price           Decimal       @db.Decimal(15, 2)
+  currency        String        @default("DOP")
+
+  // Relaciones con catálogos
+  propertyTypeId  Int
+  operationTypeId Int
+
+  propertyType    PropertyType  @relation(fields: [propertyTypeId], references: [id])
+  operationType   OperationType @relation(fields: [operationTypeId], references: [id])
+
+  // Características físicas
+  bedrooms        Int?
+  bathrooms       Int?
+  parkingSpaces   Int?
+  constructionArea Decimal?     @db.Decimal(10, 2)
+  landArea        Decimal?      @db.Decimal(10, 2)
+
+  // Estado de publicación
+  featured        Boolean       @default(false)
+  active          Boolean       @default(true)
+
+  // Relaciones
+  location        Location?
+  images          PropertyImage[]
+
+  // Fechas
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+// ============================================================
+// UBICACIÓN
+// Una propiedad tiene una ubicación asociada
+// ============================================================
+
+model Location {
+  id          Int       @id @default(autoincrement())
+
+  propertyId  Int       @unique
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // Ubicación administrativa
+  province    String
+  municipality String?
+  sector      String?
   address     String?
-  city        String?
-  province    String?
 
-  featured    Boolean  @default(false)
+  // Coordenadas
+  latitude    Decimal?  @db.Decimal(10, 7)
+  longitude   Decimal?  @db.Decimal(10, 7)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ============================================================
+// IMÁGENES DE PROPIEDADES
+// Una propiedad puede tener múltiples imágenes
+// ============================================================
+
+model PropertyImage {
+  id          Int       @id @default(autoincrement())
+
+  propertyId  Int
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // URL donde está almacenada la imagen
+  url         String
+
+  // Texto alternativo para accesibilidad y SEO
+  altText     String?
+
+  // Orden de aparición en la galería
+  sortOrder   Int       @default(0)
+
+  // Imagen principal
+  isCover     Boolean   @default(false)
+
+  createdAt   DateTime  @default(now())
 }
